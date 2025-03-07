@@ -1,12 +1,11 @@
-import streamlit as st
 import torch
+import streamlit as st
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import numpy as np
 
-# Load the trained model
-model_name = "bert-base-uncased"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSequenceClassification.from_pretrained("./results")  # Adjust the path based on your model
+# Load the model and tokenizer directly inside the app
+MODEL_PATH = "Misinformation_Codes.ipynb/"  # Ensure your model files are inside the 'model/' folder
+tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 
 # Define label categories
 label_mapping = ["False", "Half-True", "Mostly-True", "True", "Barely-True", "Pants-on-Fire"]
@@ -22,7 +21,7 @@ if st.button("Detect Fake News"):
     if statement:
         # Tokenize input text
         inputs = tokenizer(statement, return_tensors="pt", truncation=True, padding=True, max_length=256)
-        
+
         # Run model inference
         with torch.no_grad():
             outputs = model(**inputs)
