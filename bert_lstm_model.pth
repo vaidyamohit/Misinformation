@@ -1,0 +1,63 @@
+import torch.nn as nn
+from transformers import AutoModel, AutoTokenizer
+from torch.utils.data import Dataset, DataLoader
+
+# ✅ Load BERT tokenizer
+tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+
+# Define dataset class
+class FakeNewsDataset(Dataset):
+    def __init__(self, texts, labels, tokenizer, max_length=128):
+        self.texts = texts.tolist()
+        self.labels = labels.tolist()
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        encoding = self.tokenizer(self.texts[idx], padding="max_length", truncation=True, max_length=self.max_length, return_tensors="pt")
+        return {
+            "input_ids": encoding["input_ids"].squeeze(0),
+            "attention_mask": encoding["attention_mask"].squeeze(0),
+            "labels": torch.tensor(self.labels[idx], dtype=torch.long)
+        }
+
+# Load Data
+train_dataset = FakeNewsDataset(train_texts, train_labels, tokenizer)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+
+# Define BERT+LSTM model
+class HybridBERTLSTM(nn.Module):
+    def __init__(self, hidden_dim=128, num_classes=6):
+        super(HybridBERTLSTM, self).__init__()
+        self.bert = AutoModel.from_pretrained('bert-base-uncased')
+        self.lstm = nn.LSTM(768, hidden_dim, batch_first=True, bidirectional=True)
+        self.fc = nn.Linear(hidden_dim * 2, num_classes)
+
+    def forward(self, input_ids, attention_mask):
+        with torch.no_grad():
+            bert_output = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        lstm_out, _ = self.lstm(bert_output.last_hidden_state)
+        return self.fc(lstm_out[:, -1, :])
+
+# Train BERT+LSTM
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = HybridBERTLSTM().to(device)
+optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
+criterion = nn.CrossEntropyLoss()
+
+for epoch in range(3):
+    model.train()
+    for batch in train_loader:
+        input_ids, attention_mask, labels = batch["input_ids"].to(device), batch["attention_mask"].to(device), batch["labels"].to(device)
+        optimizer.zero_grad()
+        outputs = model(input_ids, attention_mask)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+    print(f"Epoch {epoch+1} complete.")
+
+torch.save(model.state_dict(), "bert_lstm_model.pth")
+print("✅ BERT+LSTM Model Training Complete!")
