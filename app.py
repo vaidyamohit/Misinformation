@@ -1,15 +1,15 @@
 import streamlit as st
 import joblib
-import os
 import torch
 from transformers import AutoTokenizer, AutoModel
 import torch.nn as nn
 
-# ✅ Check if the Logistic Regression Model file exists
-if os.path.exists("lr_model.pkl"):
-    lr_model = joblib.load("lr_model.pkl")
-else:
-    st.error("⚠️ Error: `lr_model.pkl` file not found! Please upload the trained model.")
+# ✅ Load models
+st.title("📰 TrueTell: AI-Powered Misinformation Detector")
+st.write("🔍 Enter a statement below to check its credibility.")
+
+# ✅ Load Logistic Regression Model
+lr_model = joblib.load("lr_model.pkl")
 
 # ✅ Define BERT+LSTM Model Class
 class HybridBERTLSTM(nn.Module):
@@ -25,22 +25,14 @@ class HybridBERTLSTM(nn.Module):
         lstm_out, _ = self.lstm(bert_output.last_hidden_state)
         return self.fc(lstm_out[:, -1, :])
 
-# ✅ Check if BERT+LSTM model file exists
+# ✅ Load BERT+LSTM Model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 bert_lstm_model = HybridBERTLSTM().to(device)
-
-if os.path.exists("bert_lstm_model.pth"):
-    bert_lstm_model.load_state_dict(torch.load("bert_lstm_model.pth", map_location=device))
-    bert_lstm_model.eval()
-else:
-    st.error("⚠️ Error: `bert_lstm_model.pth` file not found! Please upload the trained model.")
+bert_lstm_model.load_state_dict(torch.load("bert_lstm_model.pth", map_location=device))
+bert_lstm_model.eval()
 
 # ✅ Load Tokenizer
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-
-# ✅ Streamlit UI
-st.title("📰 TrueTell: AI-Powered Misinformation Detector")
-st.write("🔍 Enter a statement below to check its credibility.")
 
 # ✅ User Inputs
 model_choice = st.selectbox("Choose a model:", ["BERT+LSTM", "TF-IDF + Logistic Regression"])
