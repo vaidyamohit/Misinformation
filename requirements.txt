@@ -1,8 +1,9 @@
-transformers
 torch
-streamlit
-numpy
-pandas
+transformers
+datasets
 scikit-learn
+pandas
+streamlit
+joblib
 nltk
-lime
+numpy
