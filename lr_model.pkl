@@ -1,0 +1,24 @@
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+
+# Load processed data
+train_texts = pd.read_csv("train_texts.csv").values.ravel()
+train_labels = pd.read_csv("train_labels.csv").values.ravel()
+val_texts = pd.read_csv("val_texts.csv").values.ravel()
+val_labels = pd.read_csv("val_labels.csv").values.ravel()
+
+# ✅ Train TF-IDF + Logistic Regression
+vectorizer = TfidfVectorizer(max_features=5000)
+lr_clf = make_pipeline(vectorizer, LogisticRegression(max_iter=500))
+lr_clf.fit(train_texts, train_labels)
+
+# Evaluate
+val_preds = lr_clf.predict(val_texts)
+print("Traditional ML Model Performance:")
+print(classification_report(val_labels, val_preds))
+
+# Save model
+joblib.dump(lr_clf, "lr_model.pkl")
+print("✅ Logistic Regression Model Saved!")
